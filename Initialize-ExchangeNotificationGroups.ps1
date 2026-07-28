@@ -122,7 +122,7 @@ $defaultGroupDefinitions = @(
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Support'; LocalPart = 'support'; BaseMembers = 'support@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Ingram'; LocalPart = 'ingram'; BaseMembers = 'ingram.customer@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Dark Web ID'; LocalPart = 'dark.web.id'; BaseMembers = 'dark.web.id@toconnect.net'; AdditionalMembers = '' }
-    [pscustomobject]@{ Enabled = $true; DisplayName = 'Datto RMM'; LocalPart = 'datto.rmm'; BaseMembers = ''; AdditionalMembers = '' }
+    [pscustomobject]@{ Enabled = $true; DisplayName = 'Datto RMM'; LocalPart = 'datto.rmm'; BaseMembers = 'datto.rmm@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Lenovo'; LocalPart = 'lenovo'; BaseMembers = 'lenovo@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Mailjet'; LocalPart = 'mailjet'; BaseMembers = 'support@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'SaaS Alerts'; LocalPart = 'saas.alerts'; BaseMembers = 'saas.alerts@toconnect.net'; AdditionalMembers = '' }
