@@ -13,7 +13,7 @@
     members, applies the sender policy, displays progress, and writes a timestamped CSV
     execution report.
 
-    No naming prefix or organization-specific identifier is required.
+    A client name or abbreviation is required in the graphical interface and is used as the prefix for every distribution group display name.
 
 .PARAMETER ExchangeModuleVersion
     Exact ExchangeOnlineManagement module version to install and import.
@@ -23,7 +23,7 @@
     Internal parameter used when the script relaunches itself in a clean process.
 
 .EXAMPLE
-    .\Initialize-ExchangeNotificationGroups.ps1
+    .\Initialize-ExchangeNotificationGroups-GUI.ps1
 
 .INPUTS
     None.
@@ -33,9 +33,9 @@
     CSV execution report.
 
 .NOTES
-    File Name : Initialize-ExchangeNotificationGroups.ps1
+    File Name : Initialize-ExchangeNotificationGroups-GUI.ps1
     Author    : Juan Ortiz
-    Version   : 2.0.1
+    Version   : 2.1.0
     Created   : 2026-07-27
     Updated   : 2026-07-27
 
@@ -122,7 +122,7 @@ $defaultGroupDefinitions = @(
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Support'; LocalPart = 'support'; BaseMembers = 'support@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Ingram'; LocalPart = 'ingram'; BaseMembers = 'ingram.customer@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Dark Web ID'; LocalPart = 'dark.web.id'; BaseMembers = 'dark.web.id@toconnect.net'; AdditionalMembers = '' }
-    [pscustomobject]@{ Enabled = $true; DisplayName = 'Datto RMM'; LocalPart = 'datto.rmm'; BaseMembers = 'datto.rmm@toconnect.net'; AdditionalMembers = '' }
+    [pscustomobject]@{ Enabled = $true; DisplayName = 'Datto RMM'; LocalPart = 'datto.rmm'; BaseMembers = ''; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Lenovo'; LocalPart = 'lenovo'; BaseMembers = 'lenovo@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'Mailjet'; LocalPart = 'mailjet'; BaseMembers = 'support@toconnect.net'; AdditionalMembers = '' }
     [pscustomobject]@{ Enabled = $true; DisplayName = 'SaaS Alerts'; LocalPart = 'saas.alerts'; BaseMembers = 'saas.alerts@toconnect.net'; AdditionalMembers = '' }
@@ -336,6 +336,14 @@ function Test-ProvisioningConfiguration {
         Assert-ValidEmailAddress -Address $Configuration.UserPrincipalName
     }
 
+    if ([string]::IsNullOrWhiteSpace($Configuration.ClientName)) {
+        throw 'Enter the client name or abbreviation.'
+    }
+
+    if ($Configuration.ClientName.Length -gt 64) {
+        throw 'The client name or abbreviation cannot exceed 64 characters.'
+    }
+
     if (
         -not [string]::IsNullOrWhiteSpace($Configuration.PrimaryDomain) -and
         $Configuration.PrimaryDomain -notmatch '^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$'
@@ -491,18 +499,37 @@ function Show-ConfigurationDialog {
     $settingsGroup = New-Object System.Windows.Forms.GroupBox
     $settingsGroup.Text = 'Provisioning settings'
     $settingsGroup.Location = New-Object System.Drawing.Point(16, 204)
-    $settingsGroup.Size = New-Object System.Drawing.Size(952, 268)
+    $settingsGroup.Size = New-Object System.Drawing.Size(952, 322)
     $settingsGroup.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $generalTab.Controls.Add($settingsGroup)
+
+    $clientNameLabel = New-Object System.Windows.Forms.Label
+    $clientNameLabel.Text = 'Client name or abbreviation'
+    $clientNameLabel.AutoSize = $true
+    $clientNameLabel.Location = New-Object System.Drawing.Point(18, 34)
+    $settingsGroup.Controls.Add($clientNameLabel)
+
+    $clientNameTextBox = New-Object System.Windows.Forms.TextBox
+    $clientNameTextBox.Location = New-Object System.Drawing.Point(190, 30)
+    $clientNameTextBox.Size = New-Object System.Drawing.Size(730, 24)
+    $clientNameTextBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $settingsGroup.Controls.Add($clientNameTextBox)
+
+    $clientNameHint = New-Object System.Windows.Forms.Label
+    $clientNameHint.Text = 'Required. Used as the prefix for every group display name, for example: XYZ Microsoft.'
+    $clientNameHint.AutoSize = $true
+    $clientNameHint.ForeColor = [System.Drawing.Color]::DimGray
+    $clientNameHint.Location = New-Object System.Drawing.Point(190, 56)
+    $settingsGroup.Controls.Add($clientNameHint)
 
     $domainLabel = New-Object System.Windows.Forms.Label
     $domainLabel.Text = 'Primary SMTP domain'
     $domainLabel.AutoSize = $true
-    $domainLabel.Location = New-Object System.Drawing.Point(18, 34)
+    $domainLabel.Location = New-Object System.Drawing.Point(18, 88)
     $settingsGroup.Controls.Add($domainLabel)
 
     $domainTextBox = New-Object System.Windows.Forms.TextBox
-    $domainTextBox.Location = New-Object System.Drawing.Point(190, 30)
+    $domainTextBox.Location = New-Object System.Drawing.Point(190, 84)
     $domainTextBox.Size = New-Object System.Drawing.Size(730, 24)
     $domainTextBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $settingsGroup.Controls.Add($domainTextBox)
@@ -511,38 +538,38 @@ function Show-ConfigurationDialog {
     $domainHint.Text = 'Optional. Leave blank to detect the default accepted domain.'
     $domainHint.AutoSize = $true
     $domainHint.ForeColor = [System.Drawing.Color]::DimGray
-    $domainHint.Location = New-Object System.Drawing.Point(190, 56)
+    $domainHint.Location = New-Object System.Drawing.Point(190, 110)
     $settingsGroup.Controls.Add($domainHint)
 
     $allowExternalCheckBox = New-Object System.Windows.Forms.CheckBox
     $allowExternalCheckBox.Text = 'Allow unauthenticated external senders'
     $allowExternalCheckBox.AutoSize = $true
     $allowExternalCheckBox.Checked = $true
-    $allowExternalCheckBox.Location = New-Object System.Drawing.Point(190, 88)
+    $allowExternalCheckBox.Location = New-Object System.Drawing.Point(190, 142)
     $settingsGroup.Controls.Add($allowExternalCheckBox)
 
     $previewCheckBox = New-Object System.Windows.Forms.CheckBox
     $previewCheckBox.Text = 'Preview changes only'
     $previewCheckBox.AutoSize = $true
     $previewCheckBox.Checked = $false
-    $previewCheckBox.Location = New-Object System.Drawing.Point(190, 120)
+    $previewCheckBox.Location = New-Object System.Drawing.Point(190, 174)
     $settingsGroup.Controls.Add($previewCheckBox)
 
     $createReportCheckBox = New-Object System.Windows.Forms.CheckBox
     $createReportCheckBox.Text = 'Create timestamped CSV execution report'
     $createReportCheckBox.AutoSize = $true
     $createReportCheckBox.Checked = $true
-    $createReportCheckBox.Location = New-Object System.Drawing.Point(190, 152)
+    $createReportCheckBox.Location = New-Object System.Drawing.Point(190, 206)
     $settingsGroup.Controls.Add($createReportCheckBox)
 
     $logLabel = New-Object System.Windows.Forms.Label
     $logLabel.Text = 'Report output folder'
     $logLabel.AutoSize = $true
-    $logLabel.Location = New-Object System.Drawing.Point(18, 194)
+    $logLabel.Location = New-Object System.Drawing.Point(18, 248)
     $settingsGroup.Controls.Add($logLabel)
 
     $logTextBox = New-Object System.Windows.Forms.TextBox
-    $logTextBox.Location = New-Object System.Drawing.Point(190, 190)
+    $logTextBox.Location = New-Object System.Drawing.Point(190, 244)
     $logTextBox.Size = New-Object System.Drawing.Size(612, 24)
     $logTextBox.Text = if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { $PSScriptRoot } else { [Environment]::GetFolderPath('Desktop') }
     $logTextBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
@@ -550,7 +577,7 @@ function Show-ConfigurationDialog {
 
     $browseButton = New-Object System.Windows.Forms.Button
     $browseButton.Text = 'Select Folder...'
-    $browseButton.Location = New-Object System.Drawing.Point(810, 188)
+    $browseButton.Location = New-Object System.Drawing.Point(810, 242)
     $browseButton.Size = New-Object System.Drawing.Size(110, 28)
     $browseButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
     $settingsGroup.Controls.Add($browseButton)
@@ -559,7 +586,7 @@ function Show-ConfigurationDialog {
     $reportHint.Text = 'The directory is required only when report creation is enabled.'
     $reportHint.AutoSize = $true
     $reportHint.ForeColor = [System.Drawing.Color]::DimGray
-    $reportHint.Location = New-Object System.Drawing.Point(190, 220)
+    $reportHint.Location = New-Object System.Drawing.Point(190, 274)
     $settingsGroup.Controls.Add($reportHint)
 
     $gridInstruction = New-Object System.Windows.Forms.Label
@@ -770,6 +797,7 @@ function Show-ConfigurationDialog {
             $configuration = [pscustomobject]@{
                 UserPrincipalName     = $upnTextBox.Text.Trim()
                 DelegatedOrganization = $delegatedTextBox.Text.Trim()
+                ClientName            = ($clientNameTextBox.Text.Trim() -replace '\s+', ' ')
                 PrimaryDomain         = $domainTextBox.Text.Trim().ToLowerInvariant()
                 ModuleVersion         = $parsedModuleVersion
                 AllowExternalSenders  = [bool]$allowExternalCheckBox.Checked
@@ -815,7 +843,6 @@ function Import-RequiredExchangeModule {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateNotNull()]
         [version]$RequiredVersion
     )
 
@@ -832,21 +859,13 @@ function Import-RequiredExchangeModule {
         $localApplicationData = $env:TEMP
     }
 
+    $documentsDirectory = [Environment]::GetFolderPath(
+        [Environment+SpecialFolder]::MyDocuments
+    )
+
     $moduleCacheRoot = Join-Path `
         -Path $localApplicationData `
         -ChildPath 'ToConnect\PowerShellModules'
-
-    $exactCacheVersionPath = Join-Path `
-        -Path $moduleCacheRoot `
-        -ChildPath (
-            '{0}\{1}' -f
-            $moduleName,
-            $requiredVersionText
-        )
-
-    $documentsDirectory = [Environment]::GetFolderPath(
-    [Environment+SpecialFolder]::MyDocuments
-    )
 
     $findExactModuleManifest = {
         $candidatePaths = New-Object System.Collections.ArrayList
@@ -856,20 +875,12 @@ function Import-RequiredExchangeModule {
                 -ListAvailable `
                 -Name $moduleName `
                 -ErrorAction SilentlyContinue |
-                Where-Object {
-                    $_.Version -eq $RequiredVersion
-                }
+                Where-Object { $_.Version -eq $RequiredVersion }
         )
 
         foreach ($availableModule in $availableModules) {
-            if (
-                -not [string]::IsNullOrWhiteSpace(
-                    [string]$availableModule.Path
-                )
-            ) {
-                [void]$candidatePaths.Add(
-                    [string]$availableModule.Path
-                )
+            if (-not [string]::IsNullOrWhiteSpace([string]$availableModule.Path)) {
+                [void]$candidatePaths.Add([string]$availableModule.Path)
             }
         }
 
@@ -881,45 +892,25 @@ function Import-RequiredExchangeModule {
             }
         }
 
-        $documentsDirectory = [Environment]::GetFolderPath(
-            [Environment+SpecialFolder]::MyDocuments
-        )
-
         if (-not [string]::IsNullOrWhiteSpace($documentsDirectory)) {
             [void]$moduleRoots.Add(
-                (
-                    Join-Path `
-                        -Path $documentsDirectory `
-                        -ChildPath 'WindowsPowerShell\Modules'
-                )
+                (Join-Path -Path $documentsDirectory -ChildPath 'WindowsPowerShell\Modules')
             )
         }
 
         if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
             [void]$moduleRoots.Add(
-                (
-                    Join-Path `
-                        -Path $env:USERPROFILE `
-                        -ChildPath 'Documents\WindowsPowerShell\Modules'
-                )
+                (Join-Path -Path $env:USERPROFILE -ChildPath 'Documents\WindowsPowerShell\Modules')
             )
 
             [void]$moduleRoots.Add(
-                (
-                    Join-Path `
-                        -Path $env:USERPROFILE `
-                        -ChildPath 'OneDrive\Documents\WindowsPowerShell\Modules'
-                )
+                (Join-Path -Path $env:USERPROFILE -ChildPath 'OneDrive\Documents\WindowsPowerShell\Modules')
             )
         }
 
         if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
             [void]$moduleRoots.Add(
-                (
-                    Join-Path `
-                        -Path $env:ProgramFiles `
-                        -ChildPath 'WindowsPowerShell\Modules'
-                )
+                (Join-Path -Path $env:ProgramFiles -ChildPath 'WindowsPowerShell\Modules')
             )
         }
 
@@ -932,32 +923,22 @@ function Import-RequiredExchangeModule {
 
             $versionedManifestPath = Join-Path `
                 -Path $moduleRoot `
-                -ChildPath (
-                    '{0}\{1}\{0}.psd1' -f
-                    $moduleName,
-                    $requiredVersionText
-                )
+                -ChildPath ('{0}\{1}\{0}.psd1' -f $moduleName, $requiredVersionText)
 
             $flatManifestPath = Join-Path `
                 -Path $moduleRoot `
-                -ChildPath (
-                    '{0}\{0}.psd1' -f
-                    $moduleName
-                )
+                -ChildPath ('{0}\{0}.psd1' -f $moduleName)
 
             [void]$candidatePaths.Add($versionedManifestPath)
             [void]$candidatePaths.Add($flatManifestPath)
         }
 
-        foreach (
-            $candidatePath in @(
+        foreach ($candidatePath in @(
                 $candidatePaths |
-                    Where-Object {
-                        -not [string]::IsNullOrWhiteSpace($_)
-                    } |
+                    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
                     Sort-Object -Unique
-            )
-        ) {
+            )) {
+
             if (-not (Test-Path -LiteralPath $candidatePath -PathType Leaf)) {
                 continue
             }
@@ -987,13 +968,8 @@ function Import-RequiredExchangeModule {
     $installFailure = $null
 
     if (-not $manifestPath) {
-        Write-Host (
-            'ExchangeOnlineManagement {0} was not found.' -f
-            $requiredVersionText
-        ) -ForegroundColor Yellow
-
-        Write-Host 'Installing it for the current user...' `
-            -ForegroundColor Yellow
+        Write-Host "ExchangeOnlineManagement $requiredVersionText was not found." -ForegroundColor Yellow
+        Write-Host 'Installing it for the current user...' -ForegroundColor Yellow
 
         $nuGetProvider = Get-PackageProvider `
             -ListAvailable `
@@ -1003,8 +979,7 @@ function Import-RequiredExchangeModule {
             Select-Object -First 1
 
         if (-not $nuGetProvider) {
-            Write-Host 'Installing the NuGet package provider...' `
-                -ForegroundColor Yellow
+            Write-Host 'Installing the NuGet package provider...' -ForegroundColor Yellow
 
             Install-PackageProvider `
                 -Name NuGet `
@@ -1027,39 +1002,23 @@ function Import-RequiredExchangeModule {
             ErrorAction     = 'Stop'
         }
 
-        if (
-            $installModuleCommand.Parameters.ContainsKey(
-                'AllowClobber'
-            )
-        ) {
-            $installModuleParameters.AllowClobber = $true
+        if ($installModuleCommand.Parameters.ContainsKey('AllowClobber')) {
+            $installModuleParameters['AllowClobber'] = $true
         }
 
-        if (
-            $installModuleCommand.Parameters.ContainsKey(
-                'AcceptLicense'
-            )
-        ) {
-            $installModuleParameters.AcceptLicense = $true
+        if ($installModuleCommand.Parameters.ContainsKey('AcceptLicense')) {
+            $installModuleParameters['AcceptLicense'] = $true
         }
 
         try {
             Install-Module @installModuleParameters
         }
         catch {
-            $installFailure = (
-                $_.Exception.Message -replace '[\r\n]+', ' '
-            ).Trim()
-
-            Write-Warning (
-                'Install-Module did not complete successfully: {0}' -f
-                $installFailure
-            )
+            $installFailure = ($_.Exception.Message -replace '[\r\n]+', ' ').Trim()
+            Write-Warning "Install-Module did not complete successfully: $installFailure"
         }
 
-        $userModuleRoot = if (
-            -not [string]::IsNullOrWhiteSpace($documentsDirectory)
-        ) {
+        $userModuleRoot = if (-not [string]::IsNullOrWhiteSpace($documentsDirectory)) {
             Join-Path `
                 -Path $documentsDirectory `
                 -ChildPath 'WindowsPowerShell\Modules'
@@ -1072,11 +1031,7 @@ function Import-RequiredExchangeModule {
             -not [string]::IsNullOrWhiteSpace($userModuleRoot) -and
             @($env:PSModulePath -split ';') -notcontains $userModuleRoot
         ) {
-            $env:PSModulePath = (
-                '{0};{1}' -f
-                $userModuleRoot,
-                $env:PSModulePath
-            )
+            $env:PSModulePath = '{0};{1}' -f $userModuleRoot, $env:PSModulePath
         }
 
         $manifestPath = & $findExactModuleManifest
@@ -1097,14 +1052,6 @@ function Import-RequiredExchangeModule {
                 Out-Null
         }
 
-        if (Test-Path -LiteralPath $exactCacheVersionPath) {
-            Remove-Item `
-                -LiteralPath $exactCacheVersionPath `
-                -Recurse `
-                -Force `
-                -ErrorAction Stop
-        }
-
         $saveModuleCommand = Get-Command `
             -Name Save-Module `
             -ErrorAction Stop
@@ -1118,12 +1065,8 @@ function Import-RequiredExchangeModule {
             ErrorAction     = 'Stop'
         }
 
-        if (
-            $saveModuleCommand.Parameters.ContainsKey(
-                'AcceptLicense'
-            )
-        ) {
-            $saveModuleParameters.AcceptLicense = $true
+        if ($saveModuleCommand.Parameters.ContainsKey('AcceptLicense')) {
+            $saveModuleParameters['AcceptLicense'] = $true
         }
 
         Write-Host (
@@ -1133,14 +1076,11 @@ function Import-RequiredExchangeModule {
         ) -ForegroundColor Cyan
 
         Save-Module @saveModuleParameters
-
         $manifestPath = & $findExactModuleManifest
     }
 
     if (-not $manifestPath) {
-        $details = if (
-            -not [string]::IsNullOrWhiteSpace($installFailure)
-        ) {
+        $details = if (-not [string]::IsNullOrWhiteSpace($installFailure)) {
             " Install-Module error: $installFailure"
         }
         else {
@@ -1149,12 +1089,13 @@ function Import-RequiredExchangeModule {
 
         throw (
             'ExchangeOnlineManagement {0} could not be located after ' +
-            'Install-Module and Save-Module.{1}'
-        ) -f $requiredVersionText, $details
+            'Install-Module and Save-Module.{1}' -f
+            $requiredVersionText,
+            $details
+        )
     }
 
-    Write-Host "Importing module from: $manifestPath" `
-        -ForegroundColor DarkGray
+    Write-Host "Importing module from: $manifestPath" -ForegroundColor DarkGray
 
     Import-Module `
         -Name $manifestPath `
@@ -1163,22 +1104,14 @@ function Import-RequiredExchangeModule {
 
     $loadedModule = Get-Module `
         -Name $moduleName |
-        Where-Object {
-            $_.Version -eq $RequiredVersion
-        } |
+        Where-Object { $_.Version -eq $RequiredVersion } |
         Select-Object -First 1
 
     if (-not $loadedModule) {
-        throw (
-            'ExchangeOnlineManagement {0} was found but could not be loaded.' -f
-            $requiredVersionText
-        )
+        throw "ExchangeOnlineManagement $requiredVersionText was found but could not be loaded."
     }
 
-    Write-Host (
-        'Loaded ExchangeOnlineManagement version {0}.' -f
-        $loadedModule.Version
-    ) -ForegroundColor DarkGray
+    Write-Host "Loaded ExchangeOnlineManagement version $($loadedModule.Version)." -ForegroundColor DarkGray
 }
 
 function Connect-ToExchangeOnline {
@@ -1283,13 +1216,11 @@ function Get-AcceptedDomainForGroups {
         if ($defaultValue -is [bool]) {
             $isDefault = [bool]$defaultValue
         }
-        elseif (
-            [string]::Equals(
+        elseif ([string]::Equals(
                 [string]$defaultValue,
                 'True',
                 [System.StringComparison]::OrdinalIgnoreCase
-            )
-        ) {
+            )) {
             $isDefault = $true
         }
 
@@ -1317,9 +1248,7 @@ function Get-AcceptedDomainForGroups {
     }
 
     if (-not [string]::IsNullOrWhiteSpace($RequestedDomain)) {
-        $normalizedRequestedDomain = $RequestedDomain.
-            Trim().
-            ToLowerInvariant()
+        $normalizedRequestedDomain = $RequestedDomain.Trim().ToLowerInvariant()
 
         $requestedDomainMatch = @(
             $normalizedDomains |
@@ -1330,8 +1259,7 @@ function Get-AcceptedDomainForGroups {
                         [System.StringComparison]::OrdinalIgnoreCase
                     )
                 }
-        ) |
-            Select-Object -First 1
+        ) | Select-Object -First 1
 
         if (-not $requestedDomainMatch) {
             $availableDomainNames = @(
@@ -1346,8 +1274,7 @@ function Get-AcceptedDomainForGroups {
         }
 
         Write-Host (
-            "Using the domain selected in the GUI: " +
-            "'$($requestedDomainMatch.DomainName)'"
+            "Using the domain selected in the GUI: '$($requestedDomainMatch.DomainName)'"
         ) -ForegroundColor Green
 
         return $requestedDomainMatch.DomainName
@@ -1355,16 +1282,12 @@ function Get-AcceptedDomainForGroups {
 
     $selectedDomain = @(
         $normalizedDomains |
-            Where-Object {
-                $_.IsDefault
-            }
-    ) |
-        Select-Object -First 1
+            Where-Object { $_.IsDefault }
+    ) | Select-Object -First 1
 
     if ($selectedDomain) {
         Write-Host (
-            "Using the default accepted domain: " +
-            "'$($selectedDomain.DomainName)'"
+            "Using the default accepted domain: '$($selectedDomain.DomainName)'"
         ) -ForegroundColor Green
 
         return $selectedDomain.DomainName
@@ -1377,17 +1300,13 @@ function Get-AcceptedDomainForGroups {
 
     $selectedDomain = @(
         $normalizedDomains |
-            Where-Object {
-                $_.DomainName -notlike '*.onmicrosoft.com'
-            } |
+            Where-Object { $_.DomainName -notlike '*.onmicrosoft.com' } |
             Sort-Object DomainName
-    ) |
-        Select-Object -First 1
+    ) | Select-Object -First 1
 
     if ($selectedDomain) {
         Write-Host (
-            "Using the first custom accepted domain: " +
-            "'$($selectedDomain.DomainName)'"
+            "Using the first custom accepted domain: '$($selectedDomain.DomainName)'"
         ) -ForegroundColor Green
 
         return $selectedDomain.DomainName
@@ -1400,17 +1319,13 @@ function Get-AcceptedDomainForGroups {
     $selectedDomain = @(
         $normalizedDomains |
             Sort-Object DomainName
-    ) |
-        Select-Object -First 1
+    ) | Select-Object -First 1
 
     if (-not $selectedDomain) {
         throw 'A usable accepted domain could not be selected.'
     }
 
-    Write-Host (
-        "Using accepted domain: '$($selectedDomain.DomainName)'"
-    ) -ForegroundColor Green
-
+    Write-Host "Using accepted domain: '$($selectedDomain.DomainName)'" -ForegroundColor Green
     return $selectedDomain.DomainName
 }
 
@@ -1738,7 +1653,7 @@ function Ensure-DistributionGroups {
 
     foreach ($groupDefinition in $enabledGroups) {
         $processedGroupCount++
-        $groupDisplayName = $groupDefinition.DisplayName
+        $groupDisplayName = '{0} {1}' -f $Configuration.ClientName, $groupDefinition.DisplayName
         $groupAddress = '{0}@{1}' -f $groupDefinition.LocalPart, $DomainName
 
         Write-Progress `
@@ -1870,6 +1785,53 @@ function Ensure-DistributionGroups {
 
             if (-not $group) {
                 throw "Group '$groupAddress' could not be resolved."
+            }
+
+            $currentDisplayName = [string](
+                Get-SafePropertyValue `
+                    -InputObject $group `
+                    -PropertyNames @('DisplayName')
+            )
+
+            if (-not [string]::Equals(
+                    $currentDisplayName,
+                    $groupDisplayName,
+                    [System.StringComparison]::Ordinal)) {
+
+                if ($Configuration.PreviewOnly) {
+                    Add-OperationResult `
+                        -Phase 'Groups' `
+                        -ObjectType 'DistributionGroup' `
+                        -Name $groupDisplayName `
+                        -Address $groupAddress `
+                        -Action 'Update display name' `
+                        -Status 'Preview' `
+                        -Message "Would change display name from '$currentDisplayName' to '$groupDisplayName'."
+
+                    Write-OperationStatus `
+                        -Status 'Preview' `
+                        -Message "Would update display name to '$groupDisplayName'."
+                }
+                else {
+                    Set-DistributionGroup `
+                        -Identity $group.Identity `
+                        -DisplayName $groupDisplayName `
+                        -BypassSecurityGroupManagerCheck `
+                        -ErrorAction Stop
+
+                    Add-OperationResult `
+                        -Phase 'Groups' `
+                        -ObjectType 'DistributionGroup' `
+                        -Name $groupDisplayName `
+                        -Address $groupAddress `
+                        -Action 'Update display name' `
+                        -Status 'Updated' `
+                        -Message "Changed display name from '$currentDisplayName' to '$groupDisplayName'."
+
+                    Write-OperationStatus `
+                        -Status 'Updated' `
+                        -Message "Updated display name to '$groupDisplayName'."
+                }
             }
 
             $currentSenderAuthentication = [bool](
@@ -2177,6 +2139,7 @@ try {
     Write-Host "Process ID             : $PID" -ForegroundColor DarkGray
     Write-Host ('PowerShell version     : {0} ({1})' -f $PSVersionTable.PSVersion, $PSVersionTable.PSEdition) -ForegroundColor DarkGray
     Write-Host "Exchange module version: $($configuration.ModuleVersion)" -ForegroundColor DarkGray
+    Write-Host "Client name            : $($configuration.ClientName)" -ForegroundColor DarkGray
 
     $operationMode = if ($configuration.PreviewOnly) { 'Preview' } else { 'Apply changes' }
     Write-Host "Operation mode         : $operationMode" -ForegroundColor DarkGray
